@@ -1,23 +1,21 @@
-// Works out which role a logged-in Firebase user has.
-// Admin check works instantly using VITE_ADMIN_EMAILS (.env),
-// without waiting for Firestore data to load.
 export function getRole(user, data) {
   if (!user || !user.email) return { role: "none" };
 
   const email = user.email.trim().toLowerCase();
 
-  // 1. Clean Environment Variable Parsing
-  const adminEmails = (import.meta.env.VITE_ADMIN_EMAILS || "")
+  // Environment variable se fetch karein, fallback ke sath
+  const rawAdminEmails = import.meta.env.VITE_ADMIN_EMAILS || "admin@gmail.com";
+  const adminEmails = rawAdminEmails
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
 
-  // 2. Immediate Admin Check (Data load hone ka wait kiye bina kaam karega)
+  // 1. Immediate Admin Check
   if (adminEmails.includes(email)) {
     return { role: "admin" };
   }
 
-  // 3. Safe Teacher Check (Firestore data)
+  // 2. Safe Teacher Check
   if (!data || !Array.isArray(data.teachers)) {
     return { role: "none" };
   }
