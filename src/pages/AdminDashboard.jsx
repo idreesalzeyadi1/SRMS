@@ -4,7 +4,7 @@ import RoleHeader from "../components/RoleHeader";
 import LoadingScreen from "../components/LoadingScreen";
 import {
   Layers, BookOpen, Users, GraduationCap, ClipboardCheck, Plus,
-  Trash2, X, Lock, Eye, EyeOff, BarChart2, Award, Send, CheckCircle2, Clock
+  Trash2, X, Lock, Eye, EyeOff, BarChart2, Award, Send, CheckCircle2, Clock, Search, Edit2, Check
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -19,6 +19,14 @@ export default function AdminDashboard() {
   const { data, loading, persist } = useSchoolData();
 
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Stat Tile Interactive Filter State
+  const [selectedStatFilter, setSelectedStatFilter] = useState("classes"); // 'classes' | 'subjects' | 'teachers' | 'students' | 'tests'
+  
+  // Drill-down UI States
+  const [activeClassDetail, setActiveClassDetail] = useState(null);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [editingStudent, setEditingStudent] = useState({ class: "", index: -1, name: "" });
 
   // Form & Input States
   const [newClass, setNewClass] = useState("");
@@ -131,6 +139,27 @@ export default function AdminDashboard() {
     setStudentBulk("");
   }
 
+  // --- STUDENT EDIT & DELETE FUNCTIONS FOR STAT DRILLDOWN ---
+  function deleteStudentFromClass(className, studentName) {
+    const currentList = data.studentsByClass[className] || [];
+    const updatedList = currentList.filter((s) => s !== studentName);
+    persist({
+      ...data,
+      studentsByClass: { ...data.studentsByClass, [className]: updatedList },
+    });
+  }
+
+  function saveEditedStudentName(className, oldName, newName) {
+    if (!newName.trim()) return;
+    const currentList = data.studentsByClass[className] || [];
+    const updatedList = currentList.map((s) => (s === oldName ? newName.trim() : s));
+    persist({
+      ...data,
+      studentsByClass: { ...data.studentsByClass, [className]: updatedList },
+    });
+    setEditingStudent({ class: "", index: -1, name: "" });
+  }
+
   function saveCountdown() {
     persist({
       ...data,
@@ -240,6 +269,27 @@ export default function AdminDashboard() {
     return { name: studentName, score };
   });
 
+  // Calculate All Conducted Tests List & Relative Time
+  const compiledAllTests = [];
+  Object.entries(data.testsByClassSubject || {}).forEach(([clsSubjKey, testsArr]) => {
+    testsArr.forEach((t) => {
+      compiledAllTests.push({ ...t, clsSubjKey });
+    });
+  });
+
+  compiledAllTests.sort((a, b) => new Date(b.date || b.createdAt || Date.now()) - new Date(a.date || a.createdAt || Date.now()));
+
+  function calcRelativeTime(dateString) {
+    if (!dateString) return "Recently";
+    const tDate = new Date(dateString);
+    const now = new Date();
+    const diffDays = Math.floor(Math.abs(now - tDate) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "TODAY";
+    if (diffDays === 1) return "1 day ago";
+    return `${diffDays} days ago`;
+  }
+
   return (
     <>
       <RoleHeader roleLabel="Admin" />
@@ -272,14 +322,224 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* Global Stat Tiles */}
+        {/* Global Stat Tiles (INTERACTIVE & CLICKABLE CARDS) */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <StatTile icon={Layers} label="Classes" value={data.classes.length} gradient="linear-gradient(135deg,#6366F1,#8B5CF6)" delay={0} />
-          <StatTile icon={BookOpen} label="Subjects" value={data.subjects.length} gradient="linear-gradient(135deg,#06B6D4,#3B82F6)" delay={0.05} />
-          <StatTile icon={Users} label="Teachers" value={data.teachers.length} gradient="linear-gradient(135deg,#F59E0B,#F43F5E)" delay={0.1} />
-          <StatTile icon={GraduationCap} label="Students" value={totalStudents} gradient="linear-gradient(135deg,#10B981,#06B6D4)" delay={0.15} />
-          <StatTile icon={ClipboardCheck} label="Tests Conducted" value={totalTests} gradient="linear-gradient(135deg,#8B5CF6,#F43F5E)" delay={0.2} />
+          <div onClick={() => setSelectedStatFilter("classes")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatTile icon={Layers} label="Classes" value={data.classes.length} gradient="linear-gradient(135deg,#6366F1,#8B5CF6)" delay={0} />
+          </div>
+          <div onClick={() => setSelectedStatFilter("subjects")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatTile icon={BookOpen} label="Subjects" value={data.subjects.length} gradient="linear-gradient(135deg,#06B6D4,#3B82F6)" delay={0.05} />
+          </div>
+          <div onClick={() => setSelectedStatFilter("teachers")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatTile icon={Users} label="Teachers" value={data.teachers.length} gradient="linear-gradient(135deg,#F59E0B,#F43F5E)" delay={0.1} />
+          </div>
+          <div onClick={() => setSelectedStatFilter("students")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatTile icon={GraduationCap} label="Students" value={totalStudents} gradient="linear-gradient(135deg,#10B981,#06B6D4)" delay={0.15} />
+          </div>
+          <div onClick={() => setSelectedStatFilter("tests")} className="cursor-pointer transition-transform hover:scale-105">
+            <StatTile icon={ClipboardCheck} label="Tests Conducted" value={totalTests} gradient="linear-gradient(135deg,#8B5CF6,#F43F5E)" delay={0.2} />
+          </div>
         </div>
+
+        {/* STAT TILE DRILL-DOWN DETAILS SECTION */}
+        {activeTab === "overview" && selectedStatFilter && (
+          <div className="space-y-4">
+            {/* 1. CLASSES DRILLDOWN */}
+            {selectedStatFilter === "classes" && (
+              <Card title="Classes Detailed Overview (Click Class for Students List)">
+                <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  {data.classes.map((c) => {
+                    const stdCount = (data.studentsByClass[c] || []).length;
+                    return (
+                      <div
+                        key={c}
+                        onClick={() => setActiveClassDetail(activeClassDetail === c ? null : c)}
+                        className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                          activeClassDetail === c ? "bg-indigo-600/20 border-indigo-500 shadow-md" : "bg-slate-900/80 border-slate-800 hover:border-indigo-500/40"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-bold text-indigo-300 text-sm">{c}</h4>
+                          <span className="text-[11px] bg-slate-800 text-indigo-300 px-2 py-0.5 rounded-md font-medium">{stdCount} Students</span>
+                        </div>
+                        <p className="text-[11px] text-gray-400 mt-2">Click to manage students list</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {activeClassDetail && (
+                  <div className="p-4 rounded-xl bg-slate-900/90 border border-indigo-500/40 space-y-3">
+                    <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                      <h4 className="text-xs font-bold text-indigo-300">Students List for {activeClassDetail}</h4>
+                      <X size={15} className="cursor-pointer text-gray-400 hover:text-white" onClick={() => setActiveClassDetail(null)} />
+                    </div>
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {(data.studentsByClass[activeClassDetail] || []).map((stdName, idx) => (
+                        <div key={idx} className="flex justify-between items-center p-2 rounded bg-slate-800/80 border border-slate-700 text-xs">
+                          {editingStudent.class === activeClassDetail && editingStudent.index === idx ? (
+                            <div className="flex items-center gap-2 w-full">
+                              <input
+                                className="smrs-input py-0.5 px-1.5 text-xs flex-1"
+                                value={editingStudent.name}
+                                onChange={(e) => setEditingStudent({ ...editingStudent, name: e.target.value })}
+                              />
+                              <Check size={14} className="text-emerald-400 cursor-pointer" onClick={() => saveEditedStudentName(activeClassDetail, stdName, editingStudent.name)} />
+                            </div>
+                          ) : (
+                            <>
+                              <span className="text-gray-200">{stdName}</span>
+                              <div className="flex gap-2">
+                                <Edit2 size={13} className="text-indigo-400 cursor-pointer hover:text-indigo-300" onClick={() => setEditingStudent({ class: activeClassDetail, index: idx, name: stdName })} />
+                                <Trash2 size={13} className="text-rose-400 cursor-pointer hover:text-rose-300" onClick={() => deleteStudentFromClass(activeClassDetail, stdName)} />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* 2. SUBJECTS DRILLDOWN */}
+            {selectedStatFilter === "subjects" && (
+              <Card title="Subjects & Teacher Mapping Overview">
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {data.subjects.map((s) => {
+                    const mappedTeachers = data.teachers.filter((t) => (t.subjects || []).includes(s));
+                    return (
+                      <div key={s} className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-bold text-cyan-300 text-sm">{s}</h4>
+                          <BookOpen size={16} className="text-cyan-400" />
+                        </div>
+                        <p className="text-[11px] text-gray-400">Assigned Teachers:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {mappedTeachers.length > 0 ? (
+                            mappedTeachers.map((t) => (
+                              <span key={t.id} className="text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800/60 px-2 py-0.5 rounded font-medium">
+                                {t.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-[11px] text-gray-500 italic">No teacher assigned</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {/* 3. TEACHERS DRILLDOWN */}
+            {selectedStatFilter === "teachers" && (
+              <Card title="Teachers List & Subjects">
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {data.teachers.map((t) => (
+                    <div key={t.id} className="p-3.5 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 space-y-2 shadow-sm">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center font-bold text-white text-xs">
+                          {t.name[0]}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-amber-200">{t.name}</h4>
+                          <p className="text-[10px] text-gray-400">{t.email}</p>
+                        </div>
+                      </div>
+                      <div className="border-t border-slate-800 pt-2">
+                        <p className="text-[10px] text-gray-400 mb-1">Subjects Allotted:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {(t.subjects || []).map((subj) => (
+                            <span key={subj} className="text-[10px] bg-slate-800 text-gray-300 px-2 py-0.5 rounded border border-slate-700">
+                              {subj}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* 4. STUDENTS DRILLDOWN */}
+            {selectedStatFilter === "students" && (
+              <Card title="Students Directory & Search">
+                <div className="relative mb-3">
+                  <Search size={15} className="absolute left-3 top-2.5 text-gray-400" />
+                  <input
+                    className="smrs-input pl-9 w-full text-xs"
+                    placeholder="Search student by name..."
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-3">
+                  {data.classes.map((c) => {
+                    const filteredStds = (data.studentsByClass[c] || []).filter((s) =>
+                      s.toLowerCase().includes(studentSearchQuery.toLowerCase())
+                    );
+                    if (filteredStds.length === 0) return null;
+                    return (
+                      <div key={c} className="p-3 bg-slate-900/60 rounded-xl border border-slate-800">
+                        <h5 className="text-xs font-bold text-emerald-400 mb-2">{c} ({filteredStds.length})</h5>
+                        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-2">
+                          {filteredStds.map((std, idx) => (
+                            <div key={idx} className="flex justify-between items-center p-2 rounded bg-slate-800/60 border border-slate-700 text-xs">
+                              <span className="text-gray-200">{std}</span>
+                              <Trash2 size={13} className="text-rose-400 cursor-pointer hover:text-rose-300" onClick={() => deleteStudentFromClass(c, std)} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {/* 5. TESTS DRILLDOWN */}
+            {selectedStatFilter === "tests" && (
+              <Card title="Tests Activity Timeline">
+                {compiledAllTests.length === 0 ? (
+                  <EmptyNote text="No tests conducted yet." />
+                ) : (
+                  <div className="space-y-2">
+                    {compiledAllTests.map((t, idx) => {
+                      const relTime = calcRelativeTime(t.date || t.createdAt);
+                      const isNew = relTime === "TODAY";
+                      return (
+                        <div key={idx} className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            {isNew ? (
+                              <span className="px-2 py-0.5 text-[10px] font-extrabold bg-rose-500 text-white rounded-full animate-pulse shadow-md shadow-rose-500/50">
+                                NEW
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 text-[10px] bg-slate-800 text-gray-400 rounded">
+                                {relTime}
+                              </span>
+                            )}
+                            <div>
+                              <h5 className="text-xs font-bold text-purple-300">{t.title || t.subject}</h5>
+                              <p className="text-[11px] text-gray-400">Teacher: {t.teacherName || "N/A"} | Total Marks: {t.totalMarks}</p>
+                            </div>
+                          </div>
+                          <span className="text-[11px] font-semibold px-2 py-1 bg-indigo-950 text-indigo-300 border border-indigo-800 rounded-lg">
+                            {t.type || "Test"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            )}
+          </div>
+        )}
 
         {activeTab === "overview" && (
           <>
@@ -426,6 +686,73 @@ export default function AdminDashboard() {
               </div>
             </Card>
           </>
+        )}
+
+        {/* TEACHER TEST HISTORY TAB */}
+        {activeTab === "records" && (
+          <Card title="Teacher Test History &amp; Marks Ledger">
+            <div className="grid sm:grid-cols-4 gap-3 mb-4">
+              <div>
+                <label className="block text-xs mb-1 text-gray-400">Teacher</label>
+                <select className="smrs-select w-full" value={selectedTeacherName} onChange={(e) => setSelectedTeacherName(e.target.value)}>
+                  <option value="">All Teachers</option>
+                  {data.teachers.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs mb-1 text-gray-400">Class</label>
+                <select className="smrs-select w-full" value={selectedRecordClass} onChange={(e) => setSelectedRecordClass(e.target.value)}>
+                  <option value="">Select Class</option>
+                  {data.classes.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs mb-1 text-gray-400">Subject</label>
+                <select className="smrs-select w-full" value={selectedRecordSubject} onChange={(e) => setSelectedRecordSubject(e.target.value)}>
+                  <option value="">Select Subject</option>
+                  {data.subjects.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs mb-1 text-gray-400">Test</label>
+                <select className="smrs-select w-full" value={selectedTestId} onChange={(e) => setSelectedTestId(e.target.value)}>
+                  <option value="">Select Test</option>
+                  {availableTestsForSelection.map((t) => (
+                    <option key={t.id} value={t.id}>{t.title} ({t.type})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {activeTestObj ? (
+              <div className="border border-slate-800 rounded-lg overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-800 text-gray-300">
+                    <tr>
+                      <th className="p-3">Student Name</th>
+                      <th className="p-3">Obtained Marks</th>
+                      <th className="p-3">Total Marks</th>
+                      <th className="p-3">Percentage</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 text-gray-300">
+                    {ledgerRows.map((row, i) => (
+                      <tr key={i} className="hover:bg-slate-800/40">
+                        <td className="p-3 font-medium">{row.name}</td>
+                        <td className="p-3">{row.score !== null ? row.score : "N/A"}</td>
+                        <td className="p-3">{activeTestObj.totalMarks}</td>
+                        <td className="p-3">
+                          {row.score !== null ? `${((row.score / activeTestObj.totalMarks) * 100).toFixed(1)}%` : "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyNote text="Select class, subject, and test to view test marks ledger." />
+            )}
+          </Card>
         )}
 
         {/* DECLARE RESULT & COUNTDOWN TAB */}
