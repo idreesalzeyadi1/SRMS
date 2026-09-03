@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The whole app's data lives in one document: schoolData/main.
+    // - Read is public (the Result page has no login).
+    // - Write requires the user to be signed in. Finer-grained checks
+    //   (e.g. "a teacher may only write marks for their own subject")
+    //   are enforced in the app's UI/logic, not here — for stricter
+    //   server-side enforcement later, move writes behind a Cloud
+    //   Function that checks the caller's role before saving.
+    match /schoolData/main {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

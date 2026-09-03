@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: #F1F4F9;
+}
+
+.smrs {
+  --bg-0: #F1F4F9;
+  --glass: #FFFFFF;
+  --glass-hover: #FBFBFE;
+  --border: #E2E6EF;
+  --border-strong: #C7CEDD;
+  --text: #101528;
+  --text-soft: #5B6478;
+  --text-faint: #93A0B4;
+  --indigo: #6366F1;
+  --violet: #8B5CF6;
+  --teal: #06B6D4;
+  --emerald: #10B981;
+  --amber: #F59E0B;
+  --rose: #F43F5E;
+  --good: #10B981;
+  --bad: #EF4444;
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse 700px 500px at 8% -10%, rgba(99,102,241,0.14) 0%, transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(6,182,212,0.12) 0%, transparent 60%),
+    var(--bg-0);
+  position: relative;
+  min-height: 100vh;
+}
+.smrs h1, .smrs h2, .smrs h3, .smrs .serif { font-family: 'Sora', 'Inter', sans-serif; }
+.smrs-blob {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(90px);
+  opacity: 0.16;
+  pointer-events: none;
+  z-index: 0;
+}
+.smrs-content { position: relative; z-index: 1; }
+
+@keyframes floatA { 0%,100% { transform: translate(0,0) } 50% { transform: translate(40px,-30px) } }
+@keyframes floatB { 0%,100% { transform: translate(0,0) } 50% { transform: translate(-35px,25px) } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes pulseGlow { 0%,100% { box-shadow: 0 0 0px rgba(99,102,241,0) } 50% { box-shadow: 0 0 30px rgba(99,102,241,0.28) } }
+@keyframes shimmerBar { from { transform: translateX(-100%) } to { transform: translateX(220%) } }
+
+.smrs-fade { animation: fadeUp 0.5s ease both; }
+
+.smrs-glass {
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 10px 28px rgba(16,24,40,0.07);
+  transition: border-color .2s ease, background .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.smrs-glass:hover { border-color: var(--border-strong); box-shadow: 0 4px 10px rgba(16,24,40,0.06), 0 16px 34px rgba(16,24,40,0.1); }
+
+.smrs-tile {
+  border-radius: 16px;
+  padding: 1.1rem 1.2rem;
+  position: relative;
+  overflow: hidden;
+  color: #ffffff;
+  isolation: isolate;
+  box-shadow: 0 8px 20px rgba(16,24,40,0.14);
+}
+.smrs-tile::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(120deg, rgba(255,255,255,0.25), rgba(255,255,255,0) 60%);
+  z-index: -1;
+}
+.smrs-tile .icon-wrap {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: rgba(255,255,255,0.28);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 0.7rem;
+}
+
+.smrs-tab {
+  border-radius: 999px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-soft);
+  display: flex; align-items: center; gap: 0.4rem;
+  transition: all .18s ease;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+.smrs-tab.active {
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(6,182,212,0.1));
+  color: var(--indigo);
+  border-color: var(--border-strong);
+  font-weight: 600;
+}
+.smrs-tab:not(.active):hover { color: var(--text); }
+
+.smrs-input, .smrs-select, textarea.smrs-input {
+  background: #F8FAFC;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 0.55rem 0.75rem;
+  color: var(--text);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.smrs-input::placeholder { color: var(--text-faint); }
+.smrs-input:focus, .smrs-select:focus {
+  border-color: var(--indigo);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+.smrs-select option { background: #ffffff; color: var(--text); }
+
+.smrs-btn {
+  border-radius: 9px;
+  padding: 0.58rem 1.15rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  cursor: pointer;
+  border: none;
+}
+.smrs-btn.gold {
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+}
+.smrs-btn.gold:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(99,102,241,0.45); }
+.smrs-btn.ghost {
+  background: #ffffff; color: var(--text-soft); border: 1px solid var(--border);
+}
+.smrs-btn.ghost:hover { color: var(--text); border-color: var(--border-strong); }
+.smrs-btn:disabled { opacity: .5; cursor: not-allowed; transform:none; }
+
+.smrs-chip {
+  display: inline-flex; align-items: center; gap: 0.32rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: #F8FAFC;
+  color: var(--text-soft);
+  transition: all .15s ease;
+}
+.smrs-chip:hover { border-color: var(--border-strong); color: var(--text); background: #EEF1F8; }
+.smrs-chip.active {
+  background: linear-gradient(135deg, var(--indigo), var(--violet));
+  color: #ffffff; border-color: transparent; font-weight: 600;
+}
+
+.smrs-ledger { border-collapse: collapse; width: 100%; }
+.smrs-ledger th {
+  text-align: left; font-weight: 600; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-faint);
+  border-bottom: 1px solid var(--border);
+  padding: 0.55rem 0.6rem;
+}
+.smrs-ledger td {
+  border-bottom: 1px solid #EEF1F6;
+  padding: 0.55rem 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+.smrs-ledger tr:hover td { background: #F8FAFC; }
+
+.smrs-digit { font-family: 'Sora', sans-serif; font-variant-numeric: tabular-nums; }
+
+.smrs-bar-track {
+  height: 7px; border-radius: 999px; background: #EDF0F6; overflow: hidden;
+}
+.smrs-bar-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--indigo), var(--teal));
+  transition: width 1s cubic-bezier(.2,.8,.2,1);
+  position: relative;
+  overflow: hidden;
+}
+.smrs-bar-fill::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: shimmerBar 2.2s ease-in-out infinite;
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .smrs-print-area, .smrs-print-area * { visibility: visible; }
+  .smrs-print-area {
+    position: absolute; left: 0; top: 0; width: 100%;
+    background: #fff !important; color: #111 !important;
+  }
+  .smrs-print-area * { color: #111 !important; border-color: #ccc !important; }
+  .smrs-no-print { display: none !important; }
+}
