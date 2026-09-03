@@ -2,18 +2,17 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-// Debugging log (Temporary check)
-console.log("Firebase API Key Loaded:", import.meta.env.VITE_FIREBASE_API_KEY);
-
+// Firebase Configuration for "Family Khata"
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDVi67wHWyVA3_39WoWbfbwt6712XRqFAY",
+  authDomain: "family-khata-dd981.firebaseapp.com",
+  projectId: "family-khata-dd981",
+  storageBucket: "family-khata-dd981.firebasestorage.app",
+  messagingSenderId: "1026183185558",
+  appId: "1:1026183185558:web:f1354ebf39703cf175eeb7"
 };
 
+// Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
