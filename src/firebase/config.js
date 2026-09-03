@@ -2,14 +2,14 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-// Firebase Configuration for "Family Khata"
+// Firebase Configuration via Environment Variables
 const firebaseConfig = {
-  apiKey: "AIzaSyDVi67wHWyVA3_39WoWbfbwt6712XRqFAY",
-  authDomain: "family-khata-dd981.firebaseapp.com",
-  projectId: "family-khata-dd981",
-  storageBucket: "family-khata-dd981.firebasestorage.app",
-  messagingSenderId: "1026183185558",
-  appId: "1:1026183185558:web:f1354ebf39703cf175eeb7"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase
