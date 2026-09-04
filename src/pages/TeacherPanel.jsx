@@ -40,11 +40,17 @@ export default function TeacherPanel() {
 
   const { teacher } = data ? getRole(user, data) : {};
 
+  // Safe Fallbacks for Data Structures
+  const safeClasses = data?.classes || [];
+  const safeTestsByClassSubject = data?.testsByClassSubject || {};
+  const safeStudentsByClass = data?.studentsByClass || {};
+  const safeMarksByTest = data?.marksByTest || {};
+
   // Compute teacher-specific test statistics for Recharts
-  const testsPerClassData = data && teacher ? data.classes.map((c) => {
+  const testsPerClassData = data && teacher ? safeClasses.map((c) => {
     let count = 0;
     (teacher.subjects || []).forEach((s) => {
-      const tests = data.testsByClassSubject[key(c, s)] || [];
+      const tests = safeTestsByClassSubject[key(c, s)] || [];
       count += tests.filter((t) => t.teacherName === teacher.name || !t.teacherName).length;
     });
     return { name: c, tests: count };
@@ -52,16 +58,16 @@ export default function TeacherPanel() {
 
   const totalMyTests = testsPerClassData.reduce((acc, curr) => acc + curr.tests, 0);
 
-  const testsForKey = data && cls && subject ? data.testsByClassSubject[key(cls, subject)] || [] : [];
+  const testsForKey = data && cls && subject ? safeTestsByClassSubject[key(cls, subject)] || [] : [];
   const selectedTest = testsForKey.find((t) => t.id === testId);
-  const students = data && cls ? data.studentsByClass[cls] || [] : [];
+  const students = data && cls ? safeStudentsByClass[cls] || [] : [];
   const filteredStudents = students.filter((s) => s.toLowerCase().includes(search.toLowerCase()));
 
   // Records View calculations
-  const recTestsForKey = data && recCls && recSubject ? data.testsByClassSubject[key(recCls, recSubject)] || [] : [];
+  const recTestsForKey = data && recCls && recSubject ? safeTestsByClassSubject[key(recCls, recSubject)] || [] : [];
   const recSelectedTest = recTestsForKey.find((t) => t.id === recTestId);
-  const recMarks = recSelectedTest ? data.marksByTest[recSelectedTest.id] || {} : {};
-  const recStudents = data && recCls ? data.studentsByClass[recCls] || [] : [];
+  const recMarks = recSelectedTest?.id ? safeMarksByTest[recSelectedTest.id] || {} : {};
+  const recStudents = data && recCls ? safeStudentsByClass[recCls] || [] : [];
 
   const recScores = recStudents.map((studentName) => {
     const markVal = recMarks[studentName];
@@ -74,12 +80,12 @@ export default function TeacherPanel() {
   const avgMark = validScores.length > 0 ? (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1) : 0;
 
   useEffect(() => {
-    if (!data || !selectedTest) { setDraft({}); return; }
-    const existing = data.marksByTest[selectedTest.id] || {};
+    if (!data || !selectedTest?.id) { setDraft({}); return; }
+    const existing = safeMarksByTest[selectedTest.id] || {};
     const merged = {};
     students.forEach((s) => { merged[s] = existing[s] ?? ""; });
     setDraft(merged);
-  }, [testId]);
+  }, [testId, data, selectedTest?.id]);
 
   if (loading || !data) return <LoadingScreen />;
 
@@ -87,10 +93,10 @@ export default function TeacherPanel() {
     const trimmedClass = newCustomClass.trim();
     if (!trimmedClass) return;
 
-    if (!data.classes.includes(trimmedClass)) {
+    if (!safeClasses.includes(trimmedClass)) {
       persist({
         ...data,
-        classes: [...data.classes, trimmedClass],
+        classes: [...safeClasses, trimmedClass],
       });
     }
 
@@ -113,7 +119,10 @@ export default function TeacherPanel() {
     const k = key(cls, subject);
     persist({
       ...data,
-      testsByClassSubject: { ...data.testsByClassSubject, [k]: [...(data.testsByClassSubject[k] || []), test] },
+      testsByClassSubject: { 
+        ...safeTestsByClassSubject, 
+        [k]: [...(safeTestsByClassSubject[k] || []), test] 
+      },
     });
     setTestId(test.id);
     setShowNewTest(false);
@@ -121,7 +130,14 @@ export default function TeacherPanel() {
   }
 
   function saveMarks() {
-    persist({ ...data, marksByTest: { ...data.marksByTest, [selectedTest.id]: { ...draft } } });
+    if (!selectedTest?.id) return;
+    persist({ 
+      ...data, 
+      marksByTest: { 
+        ...safeMarksByTest, 
+        [selectedTest.id]: { ...draft } 
+      } 
+    });
     setSavedFlash(true);
     setTimeout(() => setSavedFlash(false), 1800);
   }
@@ -263,7 +279,7 @@ export default function TeacherPanel() {
                 <div className="flex flex-wrap gap-3 items-center">
                   <select className="smrs-select w-64" value={cls} onChange={(e) => { setCls(e.target.value); setTestId(""); setShowNewTest(false); }}>
                     <option value="">-- Select Class --</option>
-                    {data.classes.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {safeClasses.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
 
                   <button
@@ -426,7 +442,7 @@ export default function TeacherPanel() {
                     onChange={(e) => { setRecCls(e.target.value); setRecTestId(""); }}
                   >
                     <option value="">-- Choose Class --</option>
-                    {data.classes.map((c) => (
+                    {safeClasses.map((c) => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
